@@ -1,0 +1,67 @@
+Gross Domestic Product Application
+========================================================
+author: Javier Carrasco
+date: September 10, 2017
+
+```{r, echo=FALSE}
+library(shiny)
+library(ggplot2)
+library(dplyr)
+library(maps)
+library(markdown)
+library(rCharts)
+
+# Load World Map
+worldMap <- map_data("world2")
+
+# Load mapping between country names in world map and World Bank GDP
+countryNamesMap <- read.csv("../data/CountryNames.csv", sep=";")
+gdp <- read.csv("../data/World Bank GDP.csv", sep=";", check.names=FALSE, dec=",",
+                colClasses=c(rep("character", 4), rep("numeric", 57)))
+gdp[,2:4] <- NULL
+gdp$mapCountryName <- countryNamesMap$Map[match(gdp$`Country Name`, countryNamesMap$WorldBank)]
+gdp <- gdp[which(gdp$`mapCountryName`!= ""),]
+worldGDP <- data.frame(cbind(seq(1960, 2016, 1), colSums(gdp[,c(2:58)], na.rm=TRUE)))
+colnames(worldGDP) <- c("year", "GDP")
+```
+
+Features
+========================================================
+- World GDP evolution chart (1960-2016).
+
+- World Map for selected year.
+
+- Browse GDP database, optionally filtering by country name, and download data.
+
+World GDP Evolution
+=======================================================
+During 1960-2016 the World GDP in current USD multiplied by 62.
+
+
+```{r, echo=FALSE, fig.width=10, fig.height=5, fig.align='center'}
+ggplot(worldGDP, aes(x=year, y=GDP/1e12)) +
+                geom_point(color="red") +
+                geom_smooth() +
+                labs(title="World GDP (current USD)", x="Year", y = "GDP in Trillions")
+```
+
+GDP World Map in 2016
+========================================================
+
+```{r, echo=FALSE, fig.align='center'}
+year <- "2016"
+dt <- gdp[, c("mapCountryName", "2016")]
+colnames(dt)[2] <- "GDP"
+dt$GDP <- dt$GDP / 1e9
+title <- sprintf("GDP %s in Billions current USD", year)
+p <- ggplot(dt, aes(map_id = mapCountryName))
+p <- p + geom_map(aes_string(fill = "GDP"), map = worldMap, colour='black')
+p <- p + expand_limits(x = worldMap$long, y = worldMap$lat)
+p <- p + coord_map() + theme_bw()
+p <- p + labs(x = "Long", y = "Lat", title = title)
+p + scale_fill_continuous(low = "#fff5eb", high = "#d94801")
+```
+
+GDP Database Browsing
+========================================================
+![alt text](Screen.png)
